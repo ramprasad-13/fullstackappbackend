@@ -15,7 +15,9 @@ const otpSchema = mongoose.Schema({
     },
     isStudent:{
         type:Boolean,
-        required: true
+    },
+    isCompany:{
+        type:Boolean,
     }
 })
 

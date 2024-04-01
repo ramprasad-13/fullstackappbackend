@@ -5,7 +5,7 @@ require('dotenv').config();
 const Otp = require('../../models/SchemaforOtp');
 
 
-router.post('/regcompany',(req,res)=>{
+router.post('/regcompany',async(req,res)=>{
     // email as input and send otp to that email and match them if worng show error else show dashboard
 
     const event="Company Registration"
@@ -13,10 +13,10 @@ router.post('/regcompany',(req,res)=>{
     const {email}= req.body;
 
     //here generarting an otp of length 6 numbers
-    const genarateOtp=()=>{
+    const genarateOtp=async()=>{
         return Math.floor(Math.random()*900000)+100000;
     }
-    const otp=genarateOtp();
+    const otp=await genarateOtp();
 
     //send otp to mail given by user using nodemailer
     const transpoter = nodemailer.createTransport({
@@ -37,37 +37,47 @@ router.post('/regcompany',(req,res)=>{
     }
 
     const saveOTP = async(email,otp)=>{
-        const findUser = await Otp.findOne({email});
-        if(findUser){
-            return res.status(400).json({message:"User already Registered"})
+        try {
+            const findUser = await Otp.findOne({email});
+            if(findUser){
+                return false;
+            }
+            else{
+                const otpExpiration = new Date(Date.now()+ 5*60*1000);
+                const newOtp= new Otp({
+                    email,
+                    otp,
+                    otpExpiration,
+                    isStudent:false
+                })
+                await newOtp.save();
+                return true;
+            }
+        } catch (error) {
+            console.error("Error in saving OTP",Error);
+            throw error;
         }
-        else{
-            const otpExpiration = new Date(Date.now()+ 5*60*1000);
-            const newOtp= new Otp({
-                email,
-                otp,
-                otpExpiration,
-                isStudent:false
-            })
-            await newOtp.save();
-        }
-        return (findUser)?false:true;
 
     }
-
     try {
-        if(saveOTP(email,otp)){
-        transpoter.sendMail(mailOptions)
-        .then(()=>{
-            return res.status(200).json({message:"Otp sent Sucessfully"})
-        })
-        .catch((error)=>{
-            console.error(error)})
-            return res.status(500).json({message:"Sending Otp Failed"});
+        const out = await saveOTP(email, otp);
+        if (out) {
+            transpoter.sendMail(mailOptions)
+                .then(() => {
+                    return res.status(200).json({ message: "Otp sent Sucessfully" });
+                })
+                .catch((error) => {
+                    console.error(error);
+                    return res.status(500).json({ message: "Sending Otp Failed" });
+                });
+        } else {
+            return res.status(400).json({ message: "User already Registered" });
         }
     } catch (error) {
-        console.error("Error in sending Otp mail",error);
+        console.error("Error in sending Otp mail", error);
+        return res.status(500).json({ message: "An error occurred while processing your request." });
     }
+    
 
 })
 module.exports = router;

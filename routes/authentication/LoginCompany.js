@@ -12,13 +12,13 @@ router.post('/logincompany',async(req,res)=>{
 
     //sendOtp
     
-    const event="Company Login"
+    const event="Student Login"
 
     //here generarting an otp of length 6 numbers
-    const genarateOtp=()=>{
+    const genarateOtp=async()=>{
         return Math.floor(Math.random()*900000)+100000;
     }
-    const otp=genarateOtp();
+    const otp=await genarateOtp();
 
     //send otp to mail given by user using nodemailer
     const transpoter = nodemailer.createTransport({
